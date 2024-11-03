@@ -1,3 +1,4 @@
+---
 - name: Playbook to output data to a file
   hosts: localhost
   gather_facts: no
@@ -16,12 +17,16 @@
         line: "An additional line appended to the file."
         create: yes
 
+    - name: Get today's date
+      command: date
+      register: date_output
+
     - name: Show a command output in a file
-      command: echo "Generated on $(date)"
+      command: echo "Generated on {{ date_output.stdout }}"
       register: command_output
 
-    - name: Write command output to file
-      copy:
+    - name: Append output to the file
+      lineinfile:
         dest: /tmp/test
-        content: "{{ command_output.stdout }}"
-        mode: '0644'
+        line: "{{ command_output.stdout }}"
+        create: yes
