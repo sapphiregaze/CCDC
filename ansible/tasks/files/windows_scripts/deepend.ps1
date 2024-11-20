@@ -47,7 +47,7 @@ function add-backupadmin {
 
     $Computer = [ADSI]"WinNT://$Env:COMPUTERNAME,Computer"
     $passwd = get-strongpwd
-    $LocalAdmin = $Computer.Create("User", "WGU-Admin")
+    $LocalAdmin = $Computer.Create("User", "WolfHack-Admin")
     $LocalAdmin.SetPassword($passwd)
     $LocalAdmin.SetInfo()
     $LocalAdmin.FullName = "Nightowls Secured Account"

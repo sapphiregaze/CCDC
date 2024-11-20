@@ -1,0 +1,56 @@
+Client:
+  # Interval between connections to the server, in seconds
+  CheckinFrequency: 60s
+
+  # Throttling setting to avoid overloading the server with data
+  CollectionThrottle: 5s
+
+  # Path to store client logs locally
+  ClientLogDir: /var/log/velociraptor
+
+  # Enable verbose logging for troubleshooting (set to false for production)
+  LogLevel: DEBUG
+
+  # Maximum size of client logs before rotation
+  LogMaxSize: 100MB
+
+  # Location for storing data temporarily on the client side
+  ClientTempDir: /tmp/velociraptor
+
+Server:
+  # Server address and port (adjust based on your setup)
+  hostname: velociraptor-server.example.com
+  port: 8000
+
+  # Disable SSL for insecure connections (set to false for production)
+  use_ssl: false
+
+Monitoring:
+  # Define monitoring collections for continuous incident response capabilities
+
+  # Linux-specific artifacts for collection at client startup
+  InitialArtifacts:
+    - Linux.Sys.Pslist           # Collects the process list
+    - Linux.Sys.BashHistory      # Collects recent bash commands
+    - Linux.Sys.Lsof             # List open files and network connections
+    - Linux.Sys.Dmesg            # Kernel ring buffer messages
+    - Linux.Network.Interfaces   # Collects network interface configurations
+
+  # Enable periodic monitoring for critical Linux checks
+  DefaultArtifacts:
+    - Linux.Sys.Pslist                # Process list (Linux)
+    - Linux.Sys.Lsof                  # Open files and network connections
+    - Linux.Sys.SystemdJournal        # Systemd logs for suspicious activities
+    - Linux.Network.Connections       # Active network connections
+    - Linux.Sys.SSHDConfig            # SSH daemon configuration audit
+    - Linux.Sys.CronJobs              # Cron jobs audit
+
+  # Frequency to collect these DefaultArtifacts (in minutes)
+  CollectionFrequency: 10m
+
+ClientMonitoring:
+  # Optional: Enable client-based monitoring to alert on local events
+  Enabled: true
+
+  # Frequency for client-based monitoring data upload
+  UploadFrequency: 5m

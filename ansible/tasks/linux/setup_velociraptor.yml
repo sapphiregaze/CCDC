@@ -1,0 +1,66 @@
+---
+- name: Create Velociraptor directory
+  tags:
+    - velociraptor
+  file:
+    path: /opt/velociraptor
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Download Velociraptor binary (Linux example)
+  tags:
+    - velociraptor
+  gt_url:
+    url: https://github.com/Velocidex/velociraptor/releases/download/v0.72/velociraptor-v0.72.3-linux-amd64
+    dest: /opt/velociraptor/velociraptor
+    mode: '0755'
+
+- name: Copy Velociraptor configuration file
+  tags:
+    - velociraptor
+  copy:
+    src: /path_to/ansible/tasks/files/client.config.yaml
+    dest: /opt/velociraptor/client.config.yaml
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Set up Velociraptor client as a systemd service
+  tags:
+    - velociraptor
+  copy:
+    dest: /etc/systemd/system/velociraptor.service
+    content: |
+      [Unit]
+      Description=Velociraptor Client Service
+      After=network.target
+
+      [Service]
+      ExecStart=/opt/velociraptor/velociraptor --config /opt/velociraptor/client.config.yaml client -v
+      Restart=always
+      User=root
+      Group=root
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd manager configuration
+  tags:
+    - velociraptor
+  command: systemctl daemon-reload
+
+- name: Enable Velociraptor service
+  tags:
+    - velociraptor
+  systemd:
+    name: velociraptor
+    enabled: yes
+
+- name: Start Velociraptor service
+  tags:
+    - velociraptor
+  systemd:
+    name: velociraptor
+    state: started
