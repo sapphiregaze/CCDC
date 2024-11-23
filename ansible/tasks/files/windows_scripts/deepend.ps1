@@ -23,11 +23,10 @@ param (
 #Functions needed
 #generate secure passwords
 function get-strongpwd {
-    $basepwd = "DirtyBirdsAtNight"
-    $date = get-date -format yyyy-MM-dd
+    $basepwd = "SuperEpicGamersSingLoudly"
     $objRand = new-object random
     $num = $objRand.next(1, 500)
-    $finalPWD = $basepwd + "!" + $date + "!" + $num
+    $finalPWD = $basepwd + "@@!" + $num
     $finalPWD
 }
 #Get local users and document them
@@ -47,7 +46,7 @@ function add-backupadmin {
 
     $Computer = [ADSI]"WinNT://$Env:COMPUTERNAME,Computer"
     $passwd = get-strongpwd
-    $LocalAdmin = $Computer.Create("User", "WolfHack-Admin")
+    $LocalAdmin = $Computer.Create("User", "Newgen-Admin")
     $LocalAdmin.SetPassword($passwd)
     $LocalAdmin.SetInfo()
     $LocalAdmin.FullName = "Nightowls Secured Account"
@@ -64,22 +63,6 @@ add-backupadmin
 Write-Output "Generating list of local users"
 $users = get-lusers
 
-#change passwords
-Write-Output "Attempting to change user passwors"
-$fdate = get-date -format o | ForEach-Object { $_ -replace ":", "." }
-foreach ($user in $users) {
-    try {
-        $plainTextPWD = get-strongpwd
-        Write-Output "Setting $user to $plainTextPWD"
-        $securePWD = ConvertTo-SecureString -String $plainTextPWD -AsPlainText -Force
-        set-localuser -name $user -Password $securePWD
-        Write-Output "$user,$plainTextPWD" >> $env:COMPUTERNAME-$fdate-localusers.txt
-    }
-    catch {
-        Write-Output "Failure when trying to change a local user password!"
-        Write-Output "User: $user"
-    }
-}
 
 #configure windows firewall
 # Netsh.exe advfirewall firewall add rule name="Block Notepad.exe network connections" program="%systemroot%\system32\notepad.exe" protocol=tcp dir=out enable=yes action=block profile=any
@@ -140,8 +123,8 @@ $Params = @{ "DisplayName" = "WGU-Block Network Connections-regsvr32.exe"
     "Action"               = "Block"
     "Program"              = "%systemroot%\system32\regsvr32.exe" 
 }
-New-NetFirewallRule @Params
 
+# New-NetFirewallRule @Params
 #add rules to filter inbound
 #Commented out just to be used as a reference
 # $Params = @{ "DisplayName" = "WGY-Block-Inbound-SMB-445"
@@ -176,8 +159,8 @@ Write-Output "Disabling SMB V1 via RegKey"
 Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" -name "SMB1" -Type DWORD -Value 0 -Force
 
 #disable smb v2
-Write-Output "Disabling SMB V2 via RegKey"
-Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" -name "SMB2" -Type DWORD -Value 0 -Force
+# Write-Output "Disabling SMB V2 via RegKey"
+# Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" -name "SMB2" -Type DWORD -Value 0 -Force
 
 #Enable smb encryption for 2012r2 or higher
 Write-Output "Enabling SMB Encryption"
@@ -354,6 +337,9 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging"
 # else {
 #     New-ItemProperty $params -Force | Out-Null
 # }
+# enable powershell transcription
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription" /v EnableTranscripting /t REG_DWORD /d 1 /f
+
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Audit" /v ProcessCreationIncludeCmdLine_Enabled /t REG_DWORD /d 1 /f
 # New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\" -Name "Audit"
 # Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Audit" -name "ProcessCreationIncludeCmdLine_Enabled" -Type DWORD -Value 1 -Force
@@ -383,6 +369,49 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Audit" /
 #https://msrc.microsoft.com/update-guide/en-US/vulnerability/CVE-2020-0796
 Write-Output "Disabling SMB Compression for CVE 2020-0796"
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" /v DisableCompression /t REG_DWORD /d 1 /f
+
+
+## Appended more stuff cuz why not
+# Author: Christopher Goes
+
+# The following comes from this gist: https://gist.github.com/alirobe/7f3b34ad89a159e6daa1
+# Which was derived from here: https://github.com/Disassembler0/Win10-Initial-Setup-Script/
+# Raise UAC level
+Set-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System" -Name "ConsentPromptBehaviorAdmin" -Type DWord -Value 5
+Set-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System" -Name "PromptOnSecureDesktop" -Type DWord -Value 1
+
+# Disable sharing mapped drives between users
+Remove-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLinkedConnections"
+
+# Enable Firewall
+Set-NetFirewallProfile -Profile * -Enabled True
+
+# Stop and disable Home Groups services
+Write-Host "Stopping and disabling Home Groups services..."
+Stop-Service "HomeGroupListener"
+Set-Service "HomeGroupListener" -StartupType Disabled
+Stop-Service "HomeGroupProvider"
+Set-Service "HomeGroupProvider" -StartupType Disabled
+
+# Disable Remote Assistance
+Write-Host "Disabling Remote Assistance..."
+Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Remote Assistance" -Name "fAllowToGetHelp" -Type DWord -Value 0
+
+# Disable Autoplay
+Write-Host "Disabling Autoplay..."
+Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers" -Name "DisableAutoplay" -Type DWord -Value 1
+
+#Disable Sticky keys prompt
+Write-Host "Disabling Sticky keys prompt..." 
+Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name "Flags" -Type String -Value "506"
+
+# Show hidden files
+Write-Host "Showing hidden files..."
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Hidden" -Type DWord -Value 1
+
+# Install Powershell man pages locally (low priority, uses bandwidth)
+Update-Help
+
 # New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\" -Name "Parameters"
 # Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" -name "DisableCompression" -Type DWORD -Value 1 -Force
 #put some sweet logos!

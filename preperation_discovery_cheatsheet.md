@@ -14,8 +14,6 @@ Control intl.cpl
 
 ## Step 2
 Create backup administrator account
-<br> Name:
-<br> Password:
 ```
 net user WGU-Admin * /ADD
 net localgroup administrators WGU-Admin /add
@@ -141,24 +139,73 @@ Check browsers for any malicious or unnecessary toolbars etc
 Reset the browsers if possible
 
 ## Step 15
-Make sure Antivirus is installed!
+Make sure Windows Defender is enabled and up to date
+```ps1
+Set-MpPreference -DisableRealtimeMonitoring $false
+Set-MpPreference -MAPSReporting 1
+Set-MpPreference -SubmitSamplesConsent 1
+Set-MpPreference -PUAProtection 1
+Enable-MpProtection
+Get-MpPreference
+```
+
 
 ## Step 16
-Configure local policies (Work in progress)
+Configure local policies
 ```
 Secpol.msc
 ```
-Security Settings>Account Policies>Account Lockout Policy
-Account Lockout Duration: 30min
-Account Lockout threshold: 2 failed logins
-Reset account lockout counter after: 30 mins
+1. Security Settings>Account Policies>Account Lockout Policy:
+     - Account Lockout Duration: 30min
+     - Account Lockout threshold: 2 failed logins
+     - Reset account lockout counter after: 30 mins 
 
-Local Policies>Audit Policy
-Enable all for failure and success
+2. Local Policies>Audit Policy :
+     - Enable all for failure and success
+
+3. Security Options:
+     - Accounts: Guest account status: Disabled
+     - Domain member: Digitally encrypt or sign secure channel data (always): Enabled
+     - Microsoft network client: Digitally sign communications (always): Enabled
+     - Microsoft network server: Digitally sign communications (always): Enabled
+     - Network access: Do not allow anonymous enumeration of SAM accounts: Enabled
+     - Network access: Do not allow anonymous enumeration of SAM accounts and shares: Enabled
+     - Network access: Let Everyone permissions apply to anonymous users: Disabled
+     - Network security: LAN Manager authentication level: Send NTLMv2 response only. Refuse LM & NTLM
+     - Network access: Named Pipes that can be accessed anonymously: None
+     - Network access: Restrict anonymous access to Named Pipes and Shares: Enabled
+     - Network access: Shares that can be accessed anonymously: None
+
+4. Advanced Audit Policy Configuration
+     - DS Access: Audit Directory Service Access: Success, Failure
+     - Logon/Logoff: Audit Logoff: Success, Failure
+     - Logon/Logoff: Audit Logon: Success, Failure
+     - Logon/Logoff: Audit Other Logon/Logoff Events: Success, Failure
+     - Object Access: Audit Detailed File Share: Success, Failure
+     - Object Access: Audit File Share: Success, Failure
+     - Object Access: Audit File System: Success, Failure
+     - Object Access: Audit Registry: Success, Failure
+
+## Step 17
+Configure local group policy
+1. Windows Settings -> Administrative Templates
+    - Network -> Lanman Workstation: Enable insecure guest logons: Disabled
+    - Network -> Network Provider: Hardened UNC Paths: Enabled
+    - Printers -> Point and Print Restrictions: Enabled
+    - Windows Components -> Remote Desktop Services -> Remote Desktop Session Host -> Security: Always prompt for password upon connection: Enabled
+    - Windows Components -> Remote Desktop Services -> Remote Desktop Session Host -> Security: Require secure RPC communication: Enabled
+    - Windows Components -> Remote Desktop Services -> Remote Desktop Session Host -> Security: Set client connection encryption level: High Level
+    - Windows Components -> Remote Desktop Services -> Remote Desktop Session Host -> Security: Always prompt for password upon connection: Enabled
+    - Windows Components -> Remote Desktop Services -> Remote Desktop Session Host -> Security: Require secure RPC communication: Enabled
+    - Windows Components -> Windows PowerShell: Turn on PowerShell Transcription: Enabled
+    - Windows Components -> WinRM: Allow Basic authentication: Disabled
+    - Windows Components -> WinRM: Allow unencrypted traffic: Disabled
+    - Windows Components -> WinRM: Disallow WinRM from storing RunAs credentials: Enabled
+    - Windows Components -> Windows Remote Shell: Allow Remote Shell Access: Disabled
 
 ## Step 17
 ### Preliminary Hardening
-* Disable SMB
+* Disable SMBv1
     - Win 7 way is
         ```
         Get-Item HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters | ForEach-Object {Get-ItemProperty $_.pspath}
