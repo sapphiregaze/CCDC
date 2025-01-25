@@ -34,6 +34,11 @@ for ($i = 0; $i -lt $groupDNs.Count; $i++) {
 
     $group = Get-ADGroup -Identity $groupDN
 
+    if ($group -eq $null) {
+        Write-Output "Group not found: $groupDN"
+        continue
+    }
+
     "Current members of the group $($group.Name):" | Out-File -FilePath $outputFile
 
     foreach ($member in Get-ADGroupMember -Identity $groupDN) {

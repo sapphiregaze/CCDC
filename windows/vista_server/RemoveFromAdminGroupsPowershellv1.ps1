@@ -31,6 +31,11 @@ for ($i = 0; $i -lt $groupDNs.Count; $i++) {
 
     $group = [ADSI]"LDAP://$groupDN"
 
+    if ($group -eq $null) {
+        Write-Output "Group not found: $groupDN"
+        continue
+    }
+
     "Current members of the group $($group.Name):" | Out-File -FilePath $outputFile
 
     foreach ($memberDN in $group.Member) {
