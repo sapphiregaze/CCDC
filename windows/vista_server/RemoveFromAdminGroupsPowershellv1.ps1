@@ -3,27 +3,49 @@ $rootDSE = [ADSI]"LDAP://RootDSE"
 $defaultNamingContext = $rootDSE.defaultNamingContext
 
 # Construct the paths for Users and Builtin containers
-$usersPath = "LDAP://CN=Users,$defaultNamingContext"
-$builtinPath = "LDAP://CN=Builtin,$defaultNamingContext"
+$usersPath = "CN=Users,$defaultNamingContext"
+$builtinPath = "CN=Builtin,$defaultNamingContext"
 
 Write-Output "Users container path: $usersPath"
 Write-Output "Builtin container path: $builtinPath"
 
-$DomainAdminOutputFile = "C:DomainAdminsMembers.txt"
-$RemoteDesktopOutputFile = "C:RemoteDesktopUsersMembers.txt"
-$EnterpriseAdminOutputFile = "C:EnterpriseAdminsMembers.txt"
-$AdministratorOutputFile = "C:AdministratorsMembers.txt"
-$RemoteManagementUsersOutputFile = "C:RemoteManagementUsersMembers.txt"
+$DomainAdminOutputFile = "C:\tmp\DomainAdminsMembers.txt"
+$RemoteDesktopOutputFile = "C:\tmp\RemoteDesktopUsersMembers.txt"
+$EnterpriseAdminOutputFile = "C:\tmp\EnterpriseAdminsMembers.txt"
+$AdministratorOutputFile = "C:\tmp\AdministratorsMembers.txt"
+$RemoteManagementUsersOutputFile = "C:\tmp\RemoteManagementUsersMembers.txt"
 
 $outputFiles = @($DomainAdminOutputFile, $RemoteDesktopOutputFile, $EnterpriseAdminOutputFile, $AdministratorOutputFile, $RemoteManagementUsersOutputFile)
 
-$domainAdminsGroupDN = "CN=Domain Admins," + $usersPath
-$remoteDesktopUsersGroupDN = "CN=Remote Desktop Users," + $builtinPath
-$enterpriseAdminsGroupDN = "CN=Enterprise Admins," + $usersPath
-$administratorsGroupDN = "CN=Administrators," + $builtinPath
-$remoteManagementUsersGroupDN = "CN=Remote Management Users," + $builtinPath
+$domainAdminsGroupDN = "CN=Domain Admins,$usersPath"
+$remoteDesktopUsersGroupDN = "CN=Remote Desktop Users,$builtinPath"
+$enterpriseAdminsGroupDN = "CN=Enterprise Admins,$usersPath"
+$administratorsGroupDN = "CN=Administrators,$builtinPath"
+$remoteManagementUsersGroupDN = "CN=Remote Management Users,$builtinPath"
 
 $groupDNs = @($domainAdminsGroupDN, $remoteDesktopUsersGroupDN, $enterpriseAdminsGroupDN, $administratorsGroupDN, $remoteManagementUsersGroupDN)
+
+function Run-Command {
+    param (
+        [string]$command,
+        [string]$outputFile
+    )
+
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $process.StartInfo.FileName = "cmd.exe"
+    $process.StartInfo.Arguments = "/c $command"
+    $process.StartInfo.UseShellExecute = $false
+    $process.StartInfo.RedirectStandardOutput = $true
+    $process.Start()
+
+    # Read output
+    $output = $process.StandardOutput.ReadToEnd()
+    $process.WaitForExit()
+
+    # Save output to file
+    $output | Out-File -FilePath $outputFile
+}
 
 for ($i = 0; $i -lt $groupDNs.Count; $i++) {
     $groupDN = $groupDNs[$i]
@@ -38,19 +60,42 @@ for ($i = 0; $i -lt $groupDNs.Count; $i++) {
 
     "Current members of the group $($group.Name):" | Out-File -FilePath $outputFile
 
+    if ($group.Member.Count -eq 0) {
+        Write-Output "No members found for group: $($group.Name)"
+        continue
+    }
+
     foreach ($memberDN in $group.Member) {
+        Write-Output "Member DN: $memberDN"
+        if ($memberDN -eq $null) {
+            Write-Output "Member DN is null"
+            continue
+        }
         $member = [ADSI]"LDAP://$memberDN"
-        $member.sAMAccountName | Add-Content -Path $outputFile
+        if ($member -eq $null) {
+            Write-Output "Member not found: $memberDN"
+            continue
+        }
+        Write-Output $member
+        $member.sAMAccountName | Out-File -FilePath $outputFile -Append
     }
 
     $accountsToKeep = @("Administrator")
 
     foreach ($memberDN in $group.Member) {
+        if ($memberDN -eq $null) {
+            Write-Output "Member DN is null"
+            continue
+        }
         $member = [ADSI]"LDAP://$memberDN"
+        if ($member -eq $null) {
+            Write-Output "Member not found: $memberDN"
+            continue
+        }
 
         if ($accountsToKeep -notcontains $member.sAMAccountName) {
             $logMessage = "Removing user: $($member.sAMAccountName)"
-            $logMessage | Add-Content -Path $outputFile
+            $logMessage | Out-File -FilePath $outputFile -Append
             $group.Remove("LDAP://$memberDN")
         }
     }
@@ -58,6 +103,6 @@ for ($i = 0; $i -lt $groupDNs.Count; $i++) {
     "Updated members of the group $($group.Name):" | Add-Content -Path $outputFile
     foreach ($memberDN in $group.Member) {
         $member = [ADSI]"LDAP://$memberDN"
-        $member.sAMAccountName | Add-Content -Path $outputFile
+        $member.sAMAccountName | Out-File -FilePath $outputFile -Append
     }
 }
