@@ -1,11 +1,11 @@
 ---
 - name: Playbook to output data to a file
-  hosts: localhost
+  hosts: all
   gather_facts: no
   tasks:
     - name: Create output file with specified content
       copy:
-        dest: /tmp/test   # Change this to your desired path
+        dest: /tmp/test
         content: |
           This is the output content.
           It can span multiple lines if needed.
