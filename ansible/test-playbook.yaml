@@ -1,0 +1,32 @@
+---
+- name: Playbook to output data to a file
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Create output file with specified content
+      copy:
+        dest: /tmp/test
+        content: |
+          This is the output content.
+          It can span multiple lines if needed.
+          Additional information can be added here.
+
+    - name: Append a line to the output file
+      lineinfile:
+        path: /tmp/test
+        line: "An additional line appended to the file."
+        create: yes
+
+    - name: Get today's date
+      command: date
+      register: date_output
+
+    - name: Show a command output in a file
+      command: echo "Generated on {{ date_output.stdout }}"
+      register: command_output
+
+    - name: Append output to the file
+      lineinfile:
+        dest: /tmp/test
+        line: "{{ command_output.stdout }}"
+        create: yes

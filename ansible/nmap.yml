@@ -1,0 +1,18 @@
+---
+- name: Perform a full Nmap scan and save to ~/nmap-scan.txt
+  hosts: web
+  become: yes
+  vars:
+    network_range: "192.168.1.0/24"
+  tasks:
+    - name: Ensure Nmap is installed
+      ansible.builtin.package:
+        name: nmap
+        state: present
+
+    - name: Perform an Nmap full scan and save results
+      ansible.builtin.shell: >
+        nmap -p- -T4 -A -v {{ network_range }} > ~/nmap-scan.txt
+      args:
+        executable: /bin/bash
+      register: nmap_result
