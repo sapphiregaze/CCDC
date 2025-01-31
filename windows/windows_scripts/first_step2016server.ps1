@@ -1,7 +1,20 @@
+# Ensure NuGet is installed
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+[Net.ServicePointManager]::SecurityProtocol
+
+#place .nupkg in C:\Program Files\WindowsPowerShell\Modules
+Invoke-WebRequest -Uri "http://pscho.xyz/windows/windows_scripts/misc/packagemanagement.1.1.0.nupkg" -OutFile "C:\Program Files\WindowsPowerShell\Modules\packagemanagement.1.1.0.nupkg"
+
+# Install-Module -Name PackageManagement -RequiredVersion 1.1.0.0
+
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$false
+
+Register-PSRepository -Default -InstallationPolicy Trusted
+
 #Install and apply modules
-Install-Module -Name PSWindowsUpdate
-Install-Module -Name ActiveDirectory
-Install-Module -Name GroupPolicy
+Install-Module -Name PSWindowsUpdate -Force -Confirm:$false
+Install-Module -Name ActiveDirectory -Force -Confirm:$false
+Install-Module -Name GroupPolicy -Force -Confirm:$false
 
 Import-Module -Name PSWindowsUpdate
 Import-Module -Name ActiveDirectory
@@ -78,7 +91,7 @@ Backup-GPO -All -Path "C:\tmp\gpos"
 #Backup AD
 $backupPath = "C:\tmp\ADBackup"
 New-Item -Path $backupPath -ItemType Directory
-# ntdsutil "activate instance ntds" "ifm" "create full $backupPath" "quit" "quit"
+ntdsutil "activate instance ntds" "ifm" "create full $backupPath" "quit" "quit"
 
 #Remove all GPOs
 Get-GPO -All | Remove-GPO -Confirm:$false
@@ -102,6 +115,16 @@ foreach ($zone in Get-Content $dnsBackupPath\zones.txt | Where-Object { $_ -matc
 
 # Enable Windows Firewall
 Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True
+
+# Enable Remote Desktop
+Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -value 0
+
+# Enable Remote Desktop Firewall Rule
+Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+# Add Administrator and iuser to Remote Desktop Users
+Add-LocalGroupMember -Group "Remote Desktop Users" -Member "Administrator"
+Add-LocalGroupMember -Group "Remote Desktop Users" -Member "iuser"
 
 # Enable Windows Defender
 Set-MpPreference -DisableRealtimeMonitoring $false
@@ -152,8 +175,32 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\SrpV2" -Name "
 #list shadow copies
 vssadmin list shadows
 
+# Enable SMB Encryption
 Write-Output "Enabling SMB Encryption"
 Set-SmbServerConfiguration –EncryptData $true -Confirm:$false
+
+# Enable SMB Signing
+Write-Output "Enabling SMB Signing"
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" -Name "RequireSecuritySignature" -Value 1 -Type DWord
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" -Name "EnableSecuritySignature" -Value 1 -Type DWord
+
+# Enable NTLMv2
+Write-Output "Enabling NTLMv2"
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "LmCompatibilityLevel" -Value 5 -Type DWord
+
+# Disable LM
+Write-Output "Disabling LM"
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "LMCompatibilityLevel" -Value 0 -Type DWord
+
+# Temporarily disable sshd
+Write-Output "Temporarily disabling sshd service"
+Stop-Service -Name sshd
+Set-Service -Name sshd -StartupType Disabled
+
+# Disable Spooler Service
+Write-Output "Disabling Spooler Service"
+Stop-Service -Name Spooler
+Set-Service -Name Spooler -StartupType Disabled
 
 #MORE MITIGATIONS, FROM WGU's deepend.ps1 script
 

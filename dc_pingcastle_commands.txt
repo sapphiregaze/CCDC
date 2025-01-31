@@ -1,0 +1,7 @@
+# PingCastle command to check the health of the domain
+PingCastle.exe --healthcheck
+
+# PingCastle command to check the health of the domain with a specific domain controller
+PingCastle.exe --healthcheck --server <DomainControllerName>
+
+
