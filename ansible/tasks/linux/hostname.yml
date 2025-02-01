@@ -1,4 +1,0 @@
-- name: Hostname
-  tags:
-    - hostname
-  command: cat /etc/hostname

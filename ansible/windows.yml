@@ -1,9 +1,0 @@
----
-- name: CCDC Tasks
-  hosts: windows
-  tasks:
-    - name: hostname
-      include_tasks: tasks/windows/hostname.yml
-      tags:
-        - never
-        - hostname

@@ -1,6 +1,0 @@
-- name: Hostname
-  tags:
-    - hostname
-  win_command: hostname
-  register: hostname
-  changed_when: "hostname.rc != 0"
