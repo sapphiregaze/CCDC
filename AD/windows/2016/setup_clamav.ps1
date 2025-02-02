@@ -1,8 +1,12 @@
-wget http://www.clamav.net/downloads/production/clamav-0.105.0.win.x64.msi -outfile clamav.msi
-.\clamav.msi /quiet
+if (-not (Test-Path "C:\tmp")) {
+    New-Item -ItemType Directory -Path "C:\tmp"
+}
 
-cp "C:\Program Files\ClamAV\conf_examples\clamd.conf.sample" "C:\Program Files\ClamAV\clamd.conf"
-cp "C:\Program Files\ClamAV\conf_examples\freshclam.conf.sample" "C:\Program Files\ClamAV\freshclam.conf"
+Invoke-WebRequest -Uri "https://pscho.xyz/AD/windows/installers/clamav.msi" -OutFile "C:\tmp\clamav.msi"
+Start-Process "C:\tmp\clamav.msi" -ArgumentList "/quiet" -Wait
+
+Copy-Item "C:\Program Files\ClamAV\conf_examples\clamd.conf.sample" "C:\Program Files\ClamAV\clamd.conf"
+Copy-Item "C:\Program Files\ClamAV\conf_examples\freshclam.conf.sample" "C:\Program Files\ClamAV\freshclam.conf"
 
 (Get-Content "C:\Program Files\ClamAV\clamd.conf") -replace '^Example$','' | Set-Content "C:\Program Files\ClamAV\clamd.conf"
 (Get-Content "C:\Program Files\ClamAV\freshclam.conf") -replace '^Example$','' | Set-Content "C:\Program Files\ClamAV\freshclam.conf"

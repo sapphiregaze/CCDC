@@ -88,19 +88,14 @@ New-Item -Path "C:\tmp" -ItemType Directory
 New-Item -Path "C:\tmp\gpos" -ItemType Directory
 
 # Change Administrator password
-$admin = Get-LocalUser -Name Administrator
 $password = Read-Host -AsSecureString "Enter new administrator password: "
 Set-LocalUser -Name Administrator -Password $password
-
-$anotherPassword = Read-Host -AsSecureString "Enter new password for new admin: "
-
-$usersOU = "OU=Users,$defaultNamingContext"
 
 # Make backup Admin account
 New-ADUSer  -Name "Inconspicious User" `
             -SamAccountName "iuser" `
             -UserPrincipalName "iuser@$env:USERDNSDOMAIN" `
-            -AccountPassword $anotherPassword `
+            -AccountPassword $password `
             -Enabled $true
 
 #Disable Guest Account
@@ -245,19 +240,47 @@ Stop-Service -Name WindowsRemoteManagement -Force
 Set-Service -Name WindowsRemoteManagement -StartupType Disabled
 
 # Only allow remote access to members of Administrators group
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "LocalAccountTokenFilterPolicy" -Value 0 -Type DWord
+Write-Output "Only allowing remote access to members of Administrators group"
+try {
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "LocalAccountTokenFilterPolicy" -Value 0 -Type DWord
+} catch {
+    Write-Output "Failed to only allow remote access to members of Administrators group!"
+}
 
 # Disable LLMNR
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" -Name "EnableMulticast" -Value 0 -Type DWord
+Write-Output "Disabling LLMNR"
+try {
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" -Name "EnableMulticast" -Value 0 -Type DWord
+} catch {
+    Write-Output "Failed to disable LLMNR!"
+}
 
 # Disable NetBIOS
-Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\NetBT\Parameters" -Name "EnableLmhosts" -Value 0 -Type DWord
+Write-Output "Disabling NetBIOS and LMHOSTS"
+try {
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\NetBT\Parameters" -Name "EnableNetbios" -Value 0 -Type DWord
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\NetBT\Parameters" -Name "EnableLmhosts" -Value 0 -Type DWord
+} catch {
+    Write-Output "Failed to disable NetBIOS!"
+}
 
 # Disable WPAD
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings" -Name "EnableAutoProxyResultCache" -Value 0 -Type DWord
+Write-Output "Disabling WPAD"
+try {
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings" -Name "EnableAutoproxyResultCache" -Value 0 -Type DWord
+}
+catch {
+    Write-Output "Failed to disable WPAD!"
+}
 
 # Disable AppLocker (counter trolling)
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\SrpV2" -Name "EnforcementMode" -Value 0 -Type DWord
+Write-Output "Disabling AppLocker"
+try{
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\SrpV2" -Name "EnforcementMode" -Value 0 -Type DWord
+}
+catch {
+    Write-Output "Failed to disable AppLocker!"
+}
 
 #list shadow copies
 vssadmin list shadows
@@ -269,26 +292,57 @@ Set-SmbServerConfiguration –EncryptData $true -Confirm:$false
 
 #Disable SMB null sessions
 Write-Output "Disabling SMB null sessions."
-Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Lsa" -name "RestrictAnonymous" -Type DWORD -Value 1 -Force
-
-#disable anonymous enumeration of SAM accounts
-Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Lsa" -name "RestrictAnonymousSAM" -Type DWORD -Value 1 -Force
-#disable eveyone includes anonymous
-Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Lsa" -name "EveryoneIncludesAnonymous" -Type DWORD -Value 0 -Force
-
+try {
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" -Name "RestrictNullSessAccess" -Value 1 -Type DWord
+}
+catch {
+    Write-Output "Failed to disable SMB null sessions."
+}
+Write-Output "Disabling Anonymous access"
+try {
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "RestrictAnonymous" -Value 1 -Type DWord
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "RestrictAnonymousSAM" -Value 1 -Type DWord
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "EveryoneIncludesAnonymous" -Value 0 -Type DWord
+}
+catch {
+    Write-Output "Failed to disable Anonymous enumeration of SAM accounts."
+}
 
 #Harden LSA to protect from mimikatz etc
 Write-Output "Enabling protections for LSA"
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options" -name "AuditLevel" -Type DWORD -Value 8 -Force
+Write-Output "This will require a reboot"
+try {
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options" -name "AuditLevel" -Type DWORD -Value 8 -Force
+} catch {
+    Write-Output "Failed to enable protections for LSA"
+}
 
 Write-Output "Enabling PPL for LSA"
-Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -name "RunAsPPL" -Type DWORD -Value 1 -Force
+Write-Output "This will require a reboot"
+try {
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -name "RunAsPPL" -Type DWORD -Value 1 -Force
+} catch {
+    Write-Output "Failed to enable PPL for LSA"
+}
 
 #disable wdigest
-New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders" -Name "WDigest"
-Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\WDigest" -name "UseLogonCredential" -Type DWORD -Value 0 -Force
+Write-Output "Disabling wdigest"
+try {
+    New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders" -Name "WDigest"
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\WDigest" -name "UseLogonCredential" -Type DWORD -Value 0 -Force
+} catch {
+    Write-Output "Failed to disable wdigest"
+}
 
 #disable ntlm
+Write-Output "Disabling ntlm"
+try {
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -name "lmcompatibilitylevel" -Type DWORD -Value 5 -Force
+} catch {
+    Write-Output "Failed to disable ntlm"
+}
+
+
 New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\" -Name "CredentialsDelegation"
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CredentialsDelegation" -name "AllowProtectedCreds" -Type DWORD -Value 1 -Force
 
@@ -418,20 +472,62 @@ catch {
     Write-Host "Failed to show hidden files."
 }
 
+#snippet from from: https://github.com/WGU-CCDC/Blue-Team-Tools/blob/main/Windows/deepend.ps1
+
+Write-Output "Adding outbound rules to prevent LOLBins."
+#add rules to prevent lolbins outbound
+$Params = @{ "DisplayName" = "WGU-Block Network Connections-Notepad.exe"
+    "Direction"            = "Outbound"
+    "Action"               = "Block"
+    "Program"              = "%systemroot%\system32\notepad.exe"
+}
+New-NetFirewallRule @params
+$Params = @{ "DisplayName" = "WGU-Block Network Connections-regsvr32.exe"
+    "Direction"            = "Outbound"
+    "Action"               = "Block"
+    "Program"              = "%systemroot%\system32\regsvr32.exe"
+}
+New-NetFirewallRule @Params
+$Params = @{ "DisplayName" = "WGU-Block Network Connections-calc.exe"
+    "Direction"            = "Outbound"
+    "Action"               = "Block"
+    "Program"              = "%systemroot%\system32\calc.exe"
+}
+New-NetFirewallRule @Params
+$Params = @{ "DisplayName" = "WGU-Block Network Connections-mshta.exe"
+    "Direction"            = "Outbound"
+    "Action"               = "Block"
+    "Program"              = "%systemroot%\system32\mshta.exe"
+}
+New-NetFirewallRule @Params
+$Params = @{ "DisplayName" = "WGU-Block Network Connections-wscript.exe"
+    "Direction"            = "Outbound"
+    "Action"               = "Block"
+    "Program"              = "%systemroot%\system32\wscript.exe"
+}
+New-NetFirewallRule @Params
+$Params = @{ "DisplayName" = "WGU-Block Network Connections-cscript.exe"
+    "Direction"            = "Outbound"
+    "Action"               = "Block"
+    "Program"              = "%systemroot%\system32\cscript.exe"
+}
+New-NetFirewallRule @Params
+$Params = @{ "DisplayName" = "WGU-Block Network Connections-runscripthelper.exe"
+    "Direction"            = "Outbound"
+    "Action"               = "Block"
+    "Program"              = "%systemroot%\system32\runscripthelper.exe"
+}
+New-NetFirewallRule @Params
+$Params = @{ "DisplayName" = "WGU-Block Network Connections-regsvr32.exe"
+    "Direction"            = "Outbound"
+    "Action"               = "Block"
+    "Program"              = "%systemroot%\system32\regsvr32.exe"
+}
+
 #Verify secure channel is not already enforced
 Get-ADComputer -Filter {OperatingSystem -Like "*Windows Server*"} | ForEach-Object {
-    nltest /server:$_.Name /sc_verify
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/c nltest /sc_query:$($_.Name)" -Wait
 }
 
 #Install Windows Updates
-Get-WindowsUpdate -Install -AcceptAll -AutoReboot
-
-#Patch ZeroLogon
-
-#TODO
-#ensure ZeroLogon is patched
-#disable sensitive permissions on everyone group on shares
-#disable sensitive permissions on everyone group on registry
-#disable sensitive permissions on everyone group on services
-#mitigate pass the hash attacks
-#mitigate printnightmare
+Get-WindowsUpdate -Install -AcceptAll
