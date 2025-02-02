@@ -1,0 +1,11 @@
+---
+- name: Upgrade Debian-based systems
+  hosts: debian-based
+  become: yes
+  tasks:
+    - name: Update repos
+      ansible.builtin.apt:
+        update_cache: yes
+    - name: Upgrade packages
+      ansible.builtin.apt:
+        upgrade: dist

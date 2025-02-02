@@ -1,0 +1,7 @@
+- name: Install bunkerweb
+  hosts: web
+  roles:
+    - bunkerity.bunkerweb
+  become: true
+  vars:
+    enable_ui: true
