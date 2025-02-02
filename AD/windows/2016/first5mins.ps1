@@ -67,7 +67,7 @@ try {
 [Net.ServicePointManager]::SecurityProtocol
 
 #place .nupkg in C:\Program Files\WindowsPowerShell\Modules
-Invoke-WebRequest -Uri "http://pscho.xyz/windows/windows_scripts/misc/packagemanagement.1.1.0.nupkg" -OutFile "C:\Program Files\WindowsPowerShell\Modules\packagemanagement.1.1.0.nupkg"
+Invoke-WebRequest -Uri "http://pscho.xyz/AD/windows/2016/misc/packagemanagement.1.1.0.nupkg" -OutFile "C:\Program Files\WindowsPowerShell\Modules\packagemanagement.1.1.0.nupkg"
 
 # Install-Module -Name PackageManagement -RequiredVersion 1.1.0.0
 
@@ -90,19 +90,9 @@ New-Item -Path "C:\tmp\gpos" -ItemType Directory
 # Change Administrator password
 $admin = Get-LocalUser -Name Administrator
 $password = Read-Host -AsSecureString "Enter new administrator password: "
-$confirmPassword = Read-Host -AsSecureString "Confirm new administrator password: "
-if ($password -ne $confirmPassword) {
-    Write-Error "Passwords do not match."
-    return
-}
 Set-LocalUser -Name Administrator -Password $password
 
 $anotherPassword = Read-Host -AsSecureString "Enter new password for new admin: "
-$confirmPassword = Read-Host -AsSecureString "Confirm new password for new admin: "
-if ($anotherPassword -ne $confirmPassword) {
-    Write-Error "Passwords do not match."
-    return
-}
 
 $usersOU = "OU=Users,$defaultNamingContext"
 
