@@ -4,7 +4,7 @@
 $exclude = Get-Content -Path .\exclude.txt
 
 # Get all the accounts
-$accounts = Get-ADUser -Filter * | Select-Object -ExpandProperty SamAccountName
+$accounts = Get-ADUser -Filter * | Select-Object -ExpandProperty SamAccountName | Where-Object {$_ -ne "Administrator" -and $_ -ne "IUSR"}
 
 # Disable all accounts that are not in the exclude list
 foreach ($account in $accounts) {
