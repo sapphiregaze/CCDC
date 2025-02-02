@@ -3,9 +3,11 @@
 ### Links to other tools
 https://github.com/aquasecurity/trivy
 https://github.com/JPCERTCC/LogonTracer.git
+https://github.com/PlumHound/PlumHound
 https://github.com/jtesta/ssh-audit/releases/download/v3.3.0/ssh-audit-3.3.0.tar.gz
 
 ### Honeypots
+https://github.com/skeeto/endlessh
 https://github.com/shizunge/endlessh-go
 
 ### Documentation
